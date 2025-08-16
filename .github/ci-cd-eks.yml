@@ -52,9 +52,9 @@ jobs:
         run: |
           echo "Building frontend image..."
           docker build -t frontend:latest ./frontend
-          docker tag frontend:latest $ECR_REGISTRY/${{ env.FRONTEND_REPO }}:latest
+          docker tag frontend:latest $ECR_REGISTRY/${{ env.FRONTEND_REPO }}:26
           docker tag frontend:latest $ECR_REGISTRY/${{ env.FRONTEND_REPO }}:${IMAGE_TAG}
-          docker push $ECR_REGISTRY/${{ env.FRONTEND_REPO }}:latest
+          docker push $ECR_REGISTRY/${{ env.FRONTEND_REPO }}:26
           docker push $ECR_REGISTRY/${{ env.FRONTEND_REPO }}:${IMAGE_TAG}
 
   deploy-to-eks:
