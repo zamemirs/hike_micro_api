@@ -77,10 +77,12 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Update kubeconfig for EKS cluster
+      - name: Set up kubeconfig
         run: |
-          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }}
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
           kubectl config current-context
+
 
       - name: Set backend image to new tag
         env:
