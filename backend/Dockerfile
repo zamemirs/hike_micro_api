@@ -2,7 +2,6 @@ FROM node:18-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
-RUN npm install express body-parser cors
 COPY . .
 EXPOSE 5000
 CMD ["npm", "start"]
