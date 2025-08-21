@@ -1,55 +1,38 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const cors = require("cors");
 const mysql = require("mysql2");
+const cors = require("cors");
 
 const app = express();
-app.use(cors());
 app.use(bodyParser.json());
+app.use(cors());
 
-// MySQL connection
 const db = mysql.createConnection({
-  host: "mysql",       // service name from docker-compose
-  user: "root",
-  password: "rootpassword",
-  database: "customerdb"
+  host: process.env.DB_HOST || "localhost",
+  user: process.env.DB_USER || "user",
+  password: process.env.DB_PASSWORD || "userpassword",
+  database: process.env.DB_NAME || "customerdb",
 });
 
 db.connect(err => {
-  if (err) {
-    console.error("❌ MySQL connection failed:", err);
-    process.exit(1);
-  }
-  console.log("✅ Connected to MySQL");
-});
-
-// Routes
-app.get("/", (req, res) => {
-  res.send("Backend running ✅");
+  if (err) throw err;
+  console.log("MySQL Connected...");
 });
 
 app.post("/customers", (req, res) => {
   const { name, email } = req.body;
-  db.query("INSERT INTO customers (name, email) VALUES (?, ?)", [name, email], (err, result) => {
-    if (err) {
-      console.error(err);
-      res.status(500).send("Error inserting customer");
-    } else {
-      res.send("Customer added successfully");
-    }
+  const sql = "INSERT INTO customers (name, email) VALUES (?, ?)";
+  db.query(sql, [name, email], (err, result) => {
+    if (err) throw err;
+    res.json({ id: result.insertId, name, email });
   });
 });
 
 app.get("/customers", (req, res) => {
   db.query("SELECT * FROM customers", (err, results) => {
-    if (err) {
-      console.error(err);
-      res.status(500).send("Error fetching customers");
-    } else {
-      res.json(results);
-    }
+    if (err) throw err;
+    res.json(results);
   });
 });
 
-const PORT = 5000;
-app.listen(PORT, () => console.log(`🚀 Backend running on port ${PORT}`));
+app.listen(5000, () => console.log("Backend running on port 5000"));
