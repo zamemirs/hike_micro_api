@@ -6,10 +6,10 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - DB_HOST=database-1.cdeuaqecq135.ap-south-1.rds.amazonaws.com
+      - DB_HOST=mysql-db.cdeuaqecq135.ap-south-1.rds.amazonaws.com
       - DB_USER=admin
-      - DB_PASSWORD=password12345
-      - DB_NAME=database-1
+      - DB_PASSWORD=arn:aws:kms:ap-south-1:590183739327:key/66a749f5-45c9-4a5a-aefb-3b7e0da346b2
+      - DB_NAME=mysql-db
     depends_on:
       - mysql-db
 
