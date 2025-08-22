@@ -6,23 +6,10 @@ services:
     ports:
       - "5000:5000"
     environment:
+      # Use AWS Secrets Manager to fetch DB credentials
+      - AWS_REGION=ap-south-1
+      - DB_SECRET_ARN=arn:aws:secretsmanager:ap-south-1:590183739327:secret:rds!db-dd179980-5742-4638-995a-a6a377a7d971-zrNqoW
+
+      # RDS Host (keep static)
       - DB_HOST=mysql-db.cdeuaqecq135.ap-south-1.rds.amazonaws.com
-      - DB_USER=admin
-      - DB_PASSWORD=arn:aws:kms:ap-south-1:590183739327:key/66a749f5-45c9-4a5a-aefb-3b7e0da346b2
-      - DB_NAME=mysql-db
-    depends_on:
-      - mysql-db
-
-  mysql-db:
-    image: mysql:8.0
-    restart: always
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: mydb
-    ports:
-      - "3306:3306"
-    volumes:
-      - mysql_data:/var/lib/mysql
-
-volumes:
-  mysql_data:
+      - DB_NAME=mysql-db   # The DB name you created in RDS
