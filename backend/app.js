@@ -8,10 +8,10 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const connection = mysql.createConnection({
-  host: process.env.DB_HOST || "mysql-db",
-  user: process.env.DB_USER || "root",
-  password: process.env.DB_PASSWORD || "rootpassword",
-  database: process.env.DB_NAME || "mydb"
+  host: process.env.DB_HOST || "database-1.cdeuaqecq135.ap-south-1.rds.amazonaws.com",
+  user: process.env.DB_USER || "admin",
+  password: process.env.DB_PASSWORD || "password12345",
+  database: process.env.DB_NAME || "database-1"
 });
 
 db.connect(err => {
