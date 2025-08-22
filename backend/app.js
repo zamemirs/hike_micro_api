@@ -8,15 +8,15 @@ app.use(bodyParser.json());
 app.use(cors());
 
 const db = mysql.createConnection({
-  host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "user",
-  password: process.env.DB_PASSWORD || "userpassword",
-  database: process.env.DB_NAME || "customerdb",
+  host: process.env.DB_HOST || "mysql-db",   // service name, not localhost
+  user: process.env.DB_USER || "root",
+  password: process.env.DB_PASSWORD || "rootpassword",
+  database: process.env.DB_NAME || "customerdb"
 });
 
 db.connect(err => {
   if (err) throw err;
-  console.log("MySQL Connected...");
+  console.log("Connected to MySQL!");
 });
 
 app.post("/customers", (req, res) => {
