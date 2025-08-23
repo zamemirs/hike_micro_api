@@ -1,13 +1,15 @@
-package com.example.backend;
+package com.example.demo;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest(classes = com.example.backend.BackendApplication.class) // 👈 point to your main application class
+import static org.assertj.core.api.Assertions.assertThat;
+
+@SpringBootTest
 class DemoApplicationTests {
 
     @Test
     void contextLoads() {
-        // This just checks if the Spring context starts successfully
+        assertThat(true).isTrue();
     }
 }
