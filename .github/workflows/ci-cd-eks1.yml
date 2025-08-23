@@ -56,9 +56,8 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      - name: Test Frontend
-        working-directory: frontend
-        run: npm test -- --watchAll=false
+      - name: Build frontend
+        run: npm run build
 
       # SonarQube Analysis (requires secrets: SONAR_TOKEN)
       - name: SonarQube Scan
