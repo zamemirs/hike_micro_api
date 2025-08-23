@@ -3,6 +3,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 RUN npm install aws-sdk
+RUN maven clean install
 COPY . .
 EXPOSE 5000
 CMD ["npm", "start"]
