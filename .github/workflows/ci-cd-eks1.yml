@@ -56,9 +56,6 @@ jobs:
         working-directory: frontend
         run: npm install
 
-      - name: Build frontend
-        run: npm run build
-
       # SonarQube Analysis (requires secrets: SONAR_TOKEN)
       - name: SonarQube Scan
         run: mvn -f backend/pom.xml sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
