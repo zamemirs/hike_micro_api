@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: backend
 spec:
-  replicas: 3
+  replicas: 2
   selector:
     matchLabels:
       app: backend
@@ -12,7 +12,6 @@ spec:
       labels:
         app: backend
     spec:
-      serviceAccountName: backend-sa
       containers:
       - name: backend
         image: 590183739327.dkr.ecr.ap-south-1a.amazonaws.com/backend:latest
