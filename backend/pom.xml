@@ -45,7 +45,7 @@
         </dependencies>
             <properties>
             <sonar.host.url>http://65.0.4.190:9000</sonar.host.url>
-            <sonar.login>${env.SONAR_TOKEN}</sonar.login>
+            <sonar.token>sqp_154aa9f7de29350d4c71cec5f8a50dbf012a92d0</sonar.token>
         </properties>
 
     <build>
