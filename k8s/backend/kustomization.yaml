@@ -1,6 +1,5 @@
 resources:
   - deployment.yaml
-  - service.yaml
 
 images:
   - name: 590183739327.dkr.ecr.ap-south-1.amazonaws.com/backend
