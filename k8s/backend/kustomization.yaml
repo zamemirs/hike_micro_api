@@ -1,6 +1,5 @@
 resources:
   - deployment.yaml
-
 images:
   - name: 590183739327.dkr.ecr.ap-south-1.amazonaws.com/backend
-    newTag: latest  # CI will overwrite this to the git SHA
+    newTag: d2780086851658e5b82b614d8f54eb0a296cc904 # CI will overwrite this to the git SHA
