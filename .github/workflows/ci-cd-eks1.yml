@@ -1,4 +1,4 @@
-name: Build, Push Images and Deploy to EKS
+name: Build, Push Images and Deploy to EKS (GitOps via Argo CD)
 
 on:
   push:
@@ -54,9 +54,16 @@ jobs:
 
       - name: Install Frontend
         working-directory: frontend
-        run: npm install
+        run: |
+          if [ -f package-lock.json ]; then
+            echo "Using npm ci"
+            npm ci
+          else
+            echo "No lockfile, using npm install"
+            npm install
+          fi
 
-      # SonarQube Analysis (requires secrets: SONAR_TOKEN)
+      # SonarQube Analysis (requires secret SONAR_TOKEN and valid sonar.host.url in Maven/command)
       - name: SonarQube Scan
         run: mvn -f backend/pom.xml sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
@@ -98,48 +105,50 @@ jobs:
           docker push $ECR_REGISTRY/${{ env.FRONTEND_REPO }}:latest
           docker push $ECR_REGISTRY/${{ env.FRONTEND_REPO }}:${IMAGE_TAG}
 
-  deploy-to-eks:
-    name: "Deploy to EKS (namespace hike)"
+  bump-tags-and-let-argocd-sync:
+    name: "Commit image tags (GitOps deploy via Argo CD)"
     runs-on: ubuntu-latest
     needs: build-and-push
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
+      - name: Install yq
+        uses: mikefarah/yq@v4.44.3
 
-      - name: Check AWS identity
-        run: aws sts get-caller-identity
-
-      - name: Install kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Update kubeconfig for EKS cluster
-        run: |
-          aws eks --region $AWS_REGION update-kubeconfig --name $EKS_CLUSTER_NAME
-          kubectl config current-context
-
-      - name: Update backend deployment image
+      - name: Bump image tags in Kustomize and commit
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          kubectl -n $K8S_NAMESPACE set image deployment/backend backend=$ECR_REGISTRY/${{ env.BACKEND_REPO }}:${IMAGE_TAG}
-          kubectl -n $K8S_NAMESPACE rollout status deployment/backend --timeout=120s
+          set -e
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
 
-      - name: Update frontend deployment image
-        env:
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          kubectl -n $K8S_NAMESPACE set image deployment/frontend frontend=$ECR_REGISTRY/${{ env.FRONTEND_REPO }}:${IMAGE_TAG}
-          kubectl -n $K8S_NAMESPACE rollout status deployment/frontend --timeout=120s
+          echo "Updating backend image tag to ${IMAGE_TAG}"
+          # Update the 'newTag' for the matching image in k8s/backend/kustomization.yaml
+          yq -i '
+            (.images[] | select(.name == "'$ECR_REGISTRY'/'$BACKEND_REPO'") ).newTag = env(IMAGE_TAG)
+          ' k8s/backend/kustomization.yaml
 
-      - name: Verify namespace resources
-        run: |
-          kubectl -n $K8S_NAMESPACE get deploy,po,svc
+          echo "Updating frontend image tag to ${IMAGE_TAG}"
+          # Update the 'newTag' for the matching image in k8s/frontend/kustomization.yaml
+          yq -i '
+            (.images[] | select(.name == "'$ECR_REGISTRY'/'$FRONTEND_REPO'") ).newTag = env(IMAGE_TAG)
+          ' k8s/frontend/kustomization.yaml
+
+          git add k8s/backend/kustomization.yaml k8s/frontend/kustomization.yaml
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore(cd): bump images to ${IMAGE_TAG}"
+            git push
+          fi
+
+      # Optional: If you want to trigger an immediate sync via Argo CD API
+      # - name: Trigger Argo CD sync (optional)
+      #   if: ${{ secrets.ARGOCD_SERVER && secrets.ARGOCD_TOKEN }}
+      #   run: |
+      #     curl -k -X POST "https://${{ secrets.ARGOCD_SERVER }}/api/v1/applications/backend/sync" \
+      #       -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}"
+      #     curl -k -X POST "https://${{ secrets.ARGOCD_SERVER }}/api/v1/applications/frontend/sync" \
+      #       -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}"
