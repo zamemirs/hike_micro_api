@@ -1,12 +1,14 @@
-name: Build, Push Images and Deploy to EKS (GitOps via Argo CD)
+name: Build, Push Images and Deploy via Argo CD (GitOps)
 
 on:
-  permissions:
-    contents: write
   push:
     branches:
       - main
   workflow_dispatch: {}
+
+# Required so the workflow can push back to the repo
+permissions:
+  contents: write
 
 env:
   AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -65,7 +67,7 @@ jobs:
             npm install
           fi
 
-      # SonarQube Analysis (requires secret SONAR_TOKEN and valid sonar.host.url in Maven/command)
+      # SonarQube Analysis (requires secret SONAR_TOKEN and proper sonar.host.url in your Maven/Sonar config)
       - name: SonarQube Scan
         run: mvn -f backend/pom.xml sonar:sonar -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
@@ -108,7 +110,7 @@ jobs:
           docker push $ECR_REGISTRY/${{ env.FRONTEND_REPO }}:${IMAGE_TAG}
 
   bump-tags-and-let-argocd-sync:
-    name: "Commit image tags (GitOps deploy via Argo CD)"
+    name: "Commit image tags (Argo CD syncs)"
     runs-on: ubuntu-latest
     needs: build-and-push
 
@@ -118,39 +120,32 @@ jobs:
       - name: Install yq
         uses: mikefarah/yq@v4.44.3
 
-      - name: Bump image tags in Kustomize and commit
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update Kustomize image tags and push
         env:
           IMAGE_TAG: ${{ github.sha }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -e
-          git config user.name "github-actions"
-          git config user.email "actions@github.com"
 
+          # Backend
           echo "Updating backend image tag to ${IMAGE_TAG}"
-          # Update the 'newTag' for the matching image in k8s/backend/kustomization.yaml
           yq -i '
-            (.images[] | select(.name == "'$ECR_REGISTRY'/'$BACKEND_REPO'") ).newTag = env(IMAGE_TAG)
+            (.images[] | select(.name == "'"$ECR_REGISTRY/$BACKEND_REPO"'")).newTag = env(IMAGE_TAG)
           ' k8s/backend/kustomization.yaml
 
+          # Frontend
           echo "Updating frontend image tag to ${IMAGE_TAG}"
-          # Update the 'newTag' for the matching image in k8s/frontend/kustomization.yaml
           yq -i '
-            (.images[] | select(.name == "'$ECR_REGISTRY'/'$FRONTEND_REPO'") ).newTag = env(IMAGE_TAG)
+            (.images[] | select(.name == "'"$ECR_REGISTRY/$FRONTEND_REPO"'")).newTag = env(IMAGE_TAG)
           ' k8s/frontend/kustomization.yaml
 
           git add k8s/backend/kustomization.yaml k8s/frontend/kustomization.yaml
-          if git diff --cached --quiet; then
-            echo "No changes to commit."
-          else
-            git commit -m "chore(cd): bump images to ${IMAGE_TAG}"
-            git push
-          fi
+          git commit -m "chore(cd): bump images to ${IMAGE_TAG}" || echo "No changes to commit"
 
-      # Optional: If you want to trigger an immediate sync via Argo CD API
-      # - name: Trigger Argo CD sync (optional)
-      #   if: ${{ secrets.ARGOCD_SERVER && secrets.ARGOCD_TOKEN }}
-      #   run: |
-      #     curl -k -X POST "https://${{ secrets.ARGOCD_SERVER }}/api/v1/applications/backend/sync" \
-      #       -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}"
-      #     curl -k -X POST "https://${{ secrets.ARGOCD_SERVER }}/api/v1/applications/frontend/sync" \
-      #       -H "Authorization: Bearer ${{ secrets.ARGOCD_TOKEN }}"
+          # Push back using the workflow token
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main
