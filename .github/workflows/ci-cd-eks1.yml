@@ -1,6 +1,8 @@
 name: Build, Push Images and Deploy to EKS (GitOps via Argo CD)
 
 on:
+  permissions:
+    contents: write
   push:
     branches:
       - main
